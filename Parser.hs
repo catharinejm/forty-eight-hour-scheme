@@ -27,9 +27,16 @@ data LispVal = Atom String
 
 parseString :: Parser LispVal
 parseString = do char '"'
-                 x <- many (noneOf "\"")
+                 x <- many escapedChar
                  char '"'
                  return $ String x
+
+escapedChar = try (string "\\\"" >> return '"')
+              <|> try (string "\\\\" >> return '\\')
+              <|> try (string "\\n" >> return '\n')
+              <|> try (string "\\t" >> return '\t')
+              <|> try (string "\\r" >> return '\r')
+              <|> noneOf "\""
 
 parseAtom :: Parser LispVal
 parseAtom = do first <- letter <|> symbol
