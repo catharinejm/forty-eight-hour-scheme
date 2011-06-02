@@ -3,7 +3,7 @@ import System
 import Control.Monad
 
 symbol :: Parser Char
-symbol = oneOf "!#$%|*+-/:<=>?@^_~"
+symbol = oneOf "!$%&|*+-/:<=?>@^_~#"
 
 readExpr :: String -> String
 readExpr input = case parse parseExpr "lisp" input of
