@@ -132,7 +132,8 @@ primitives = [("+", numericBinop (+)),
               ("cdr", cdr),
               ("cons", cons),
               ("eq?", eqv),
-              ("eqv?", eqv)]
+              ("eqv?", eqv),
+              ("equal?", equal)]
 
 isAtom :: [LispVal] -> LispVal
 isAtom [(Atom _)] = Bool True
@@ -242,3 +243,18 @@ eqv [(List arg1), (List arg2)] = return $ Bool $ (length arg1 == length arg2)
                                                                Right (Bool val) -> val
 eqv [_, _] = return $ Bool False
 eqv badArgList = throwError $ NumArgs 2 badArgList
+
+data Unpacker = forall a. Eq a => AnyUnpacker (LispVal -> ThrowsError a)
+
+unpackEquals :: LispVal -> LispVal -> Unpacker -> ThrowsError Bool
+unpackEquals arg1 arg2 (AnyUnpacker unpacker) = do unpacked1 <- unpacker arg1
+                                                   unpacked2 <- unpacker arg2
+                                                   return $ unpacked1 == unpacked2
+                                                `catchError` (const $ return False)
+
+equal :: [LispVal] -> ThrowsError LispVal
+equal [arg1, arg2] = do primitiveEquals <- liftM or $ mapM (unpackEquals arg1 arg2)
+                                           [AnyUnpacker unpackNum, AnyUnpacker unpackStr, AnyUnpacker unpackBool]
+                        eqvEquals <- eqv [arg1, arg2]
+                        return $ Bool $ (primitiveEquals || let (Bool x) = eqvEquals in x)
+equal badArgList = throwError $ NumArgs 2 badArgList
